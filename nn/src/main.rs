@@ -6,9 +6,10 @@ mod optimizer;
 mod lr_scheduler;
 mod data;
 
-use crate::{layer::{Linear, ReLU, Sequential, Layer}, lr_scheduler::{Scheduler, ExponentialDecay}, matrix::Matrix, optimizer::{Adam, Optimizer}};
+use crate::{data::DataLoader, layer::{Layer, Linear, ReLU, Sequential}, lr_scheduler::{ExponentialDecay, Scheduler}, matrix::Matrix, optimizer::{Adam, Optimizer}};
+use data::CIFAR10;
 use rand::{rngs::StdRng, SeedableRng};
-use std::{fs, vec};
+use std::{fs, iter::Iterator, vec};
 
 fn main() {
     //let x = Matrix::full(1, 2, 1.0);
@@ -38,15 +39,24 @@ fn main() {
     //optim.step(model.parameters());
     //println!("{:#?}", model.parameters()[0].data);
     //println!("{}", optim.get_lr());
-    //optim.set_lr(sch.step(optim.get_lr()));
+    //sch.step(&mut optim);
     //println!("{}", optim.get_lr());
     
-    let bytes = fs::read("../data/cifar-10-batches-bin/data_batch_1.bin").unwrap();
-    let mut x = vec![];
-    let mut y = vec![];
-    for chunk in bytes.chunks(3073) {
-        y.push(chunk[0]);
-        x.append(chunk[1..].to_vec().as_mut());
+    //let bytes = fs::read("../data/cifar-10-batches-bin/data_batch_1.bin").unwrap();
+    //let mut x = vec![];
+    //let mut y = vec![];
+    //for chunk in bytes.chunks(3073) {
+    //    y.push(chunk[0]);
+    //    x.append(chunk[1..].to_vec().as_mut());
+    //}
+    //println!("{:?}", y[..10].to_vec());
+
+    let dataset = CIFAR10::new(vec!["../data/cifar-10-batches-bin/data_batch_1.bin"]);
+    println!("{:#?}", dataset.labels[0]);
+
+    let train_loader = DataLoader::new(32, Box::new(dataset));
+    for (i, _) in train_loader.enumerate() {
+        println!("{i}");
     }
-    println!("{:?}", y[..10].to_vec());
+
 }

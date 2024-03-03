@@ -63,7 +63,7 @@ impl Matrix {
         self.get(row_, col_)
     }
 
-    fn get_row(&self, row: usize) -> Self {
+    pub fn get_row(&self, row: usize) -> Self {
         let mut out: Vec<f32> = vec![];
         for i in 0..self.cols() {
             out.push(self.get(row, i));
@@ -71,7 +71,7 @@ impl Matrix {
         Self::from_vec(1, self.cols(), out)
     }
 
-    fn get_col(&self, col: usize) -> Self {
+    pub fn get_col(&self, col: usize) -> Self {
         self.T().get_row(col).T()
     }
 
