@@ -1,15 +1,16 @@
+use std::{fs::*, vec};
+use rand::{seq::SliceRandom, Rng};
+
 use crate::matrix::Matrix;
-use std::{fs::*, ops::Index, vec};
 
 pub trait Dataset {
-    type Output;
     fn len(&self) -> usize;
-    fn getitem(&self)
+    fn get_sample(&self, index: usize) -> (&Vec<f32>, &Vec<f32>);
 }
 
 pub struct CIFAR10 {
-    images: Vec<Vec<f32>>,
-    labels: Vec<Vec<f32>>,
+    pub images: Vec<Vec<f32>>,
+    pub labels: Vec<Vec<f32>>,
 }
 
 impl CIFAR10 {
@@ -45,10 +46,59 @@ impl CIFAR10 {
     }
 }
 
-impl Index<usize> for dyn Dataset {
-    type Output = Self::Output;
-    
-    fn index(&self, index: usize) -> &Self::Output {
-        &(self.images[index], self.labels[index])
+impl Dataset for CIFAR10 {
+    fn len(&self) -> usize {
+        self.images.len()
+    }
+
+    fn get_sample(&self, index: usize) -> (&Vec<f32>, &Vec<f32>) {
+        (
+            &self.images[index],
+            &self.labels[index],
+        )
+    }
+}
+
+pub struct DataLoader {
+    pub batch_size: usize,
+    dataset: Box<dyn Dataset>,
+    indexes: Vec<usize>,
+    current: usize,
+}
+
+impl DataLoader {
+    pub fn new(batch_size: usize, dataset: Box<dyn Dataset>) -> Self {
+        let l = dataset.len();
+        Self { batch_size, dataset, indexes: (0..l).collect(), current: 0 }
+    }
+
+    pub fn shuffle<R: Rng>(&mut self, rng: &mut R) {
+        self.indexes.shuffle(rng);
+    }
+}
+
+impl Iterator for DataLoader {
+    type Item = (Matrix, Matrix);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.current + self.batch_size >= self.dataset.len() {
+            return None
+        }
+
+        let mut x_batch = vec![];
+        let mut y_batch = vec![];
+        for i in self.current..self.current+self.batch_size {
+            let (x, y) = self.dataset.get_sample(self.indexes[i]);
+            x_batch.append(&mut x.clone());
+            y_batch.append(&mut y.clone());
+        }
+        self.current += self.batch_size;
+        
+        let x_cols = x_batch.len() / self.batch_size;
+        let y_cols = y_batch.len() / self.batch_size;
+        Some((
+            Matrix::from_vec(self.batch_size, x_cols, x_batch),
+            Matrix::from_vec(self.batch_size, y_cols, y_batch)
+        ))
     }
 }
