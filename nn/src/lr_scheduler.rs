@@ -1,5 +1,7 @@
+use crate::optimizer::{self, Optimizer};
+
 pub trait Scheduler {
-    fn step(&mut self, lr: f32) -> f32;
+    fn step(&mut self, optimizer: &mut impl Optimizer);
 }
 
 pub struct ExponentialDecay {
@@ -14,8 +16,9 @@ impl ExponentialDecay {
 }
 
 impl Scheduler for ExponentialDecay {
-    fn step(&mut self, lr: f32) -> f32 {
+    fn step(&mut self, optimizer: &mut impl Optimizer) {
         self.t += 1;
-        lr * (-self.k * (self.t as f32)).exp()
+        let new_lr = optimizer.get_lr() * (-self.k * (self.t as f32)).exp();
+        optimizer.set_lr(new_lr);
     }
 }
