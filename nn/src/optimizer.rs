@@ -4,7 +4,7 @@ use std::iter::zip;
 pub trait Optimizer {
     fn step(&mut self, parameters: Vec<&mut Parameter>);
     
-    fn zero_grad(parameters: Vec<&mut Parameter>) {
+    fn zero_grad(&self, parameters: Vec<&mut Parameter>) {
         for param in parameters {
             param.zero_grad();
         }

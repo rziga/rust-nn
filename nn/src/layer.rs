@@ -19,10 +19,11 @@ pub struct Linear {
 
 impl Linear {
     pub fn new<R: Rng>(in_chan: usize, out_chan: usize, bias: bool, rng: &mut R) -> Self {
+        let bound = 1.0 / (in_chan as f32).sqrt(); // kaiming unif bound for relu
         Self {
-            weight: Parameter::new(Matrix::random(in_chan, out_chan, rng)),
+            weight: Parameter::new(bound - &((2.0*bound) * &Matrix::random(in_chan, out_chan, rng))),
             bias: if bias {
-                Some(Parameter::new(Matrix::random(1, out_chan, rng)))
+                Some(Parameter::new(Matrix::full(1, out_chan,0.0)))
             } else { None },
             input: None
         }

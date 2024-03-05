@@ -232,7 +232,10 @@ impl Matrix {
         let mut out = Matrix::full(self.rows(), other.cols(), 0.0);
         for i in 0..self.rows() {
             for j in 0..other.cols() {
-                out.set(i, j, self.get_row(i).dot(&other.get_col(j)));
+                let dot = (0..self.cols())
+                    .map(|k| self.get(i, k) * other.get(k, j))
+                    .sum();
+                out.set(i, j, dot);
             }
         }
         out

@@ -59,15 +59,15 @@ impl Dataset for CIFAR10 {
     }
 }
 
-pub struct DataLoader {
+pub struct BatchIter<'d> {
     pub batch_size: usize,
-    dataset: Box<dyn Dataset>,
+    dataset: &'d dyn Dataset,
     indexes: Vec<usize>,
     current: usize,
 }
 
-impl DataLoader {
-    pub fn new(batch_size: usize, dataset: Box<dyn Dataset>) -> Self {
+impl<'d> BatchIter<'d> {
+    pub fn new(batch_size: usize, dataset: &'d dyn Dataset) -> Self {
         let l = dataset.len();
         Self { batch_size, dataset, indexes: (0..l).collect(), current: 0 }
     }
@@ -77,7 +77,7 @@ impl DataLoader {
     }
 }
 
-impl Iterator for DataLoader {
+impl Iterator for BatchIter<'_> {
     type Item = (Matrix, Matrix);
 
     fn next(&mut self) -> Option<Self::Item> {

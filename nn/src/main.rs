@@ -6,12 +6,24 @@ mod optimizer;
 mod lr_scheduler;
 mod data;
 
-use crate::{data::DataLoader, layer::{Layer, Linear, ReLU, Sequential}, lr_scheduler::{ExponentialDecay, Scheduler}, matrix::Matrix, optimizer::{Adam, Optimizer}};
+use crate::{data::BatchIter, layer::{Layer, Linear, ReLU, Sequential}, lr_scheduler::{ExponentialDecay, Scheduler}, matrix::Matrix};
 use data::CIFAR10;
-use rand::{rngs::StdRng, SeedableRng};
+use loss::{Crossentropy, Loss};
+use optimizer::{SGD, Optimizer};
+use rand::{random, rngs::StdRng, SeedableRng};
 use std::{fs, iter::Iterator, vec};
 
 fn main() {
+    /*
+    let logits = Matrix::from_vec(2, 3, vec![1., 1., 1., 1., 1., 1.]);
+    let targets = Matrix::from_vec(2, 3, vec![1., 0., 0., 0., 1., 0.]);
+    let mut loss = Crossentropy::new();
+
+    let l = loss.forward(&logits, &targets);
+    println!("{l}");
+    println!("{:#?}", loss.backward(1.0));
+    */
+
     //let x = Matrix::full(1, 2, 1.0);
     //let y = Matrix::full(3, 2, 2.0);
     //println!("{:#?}", &x + 10f32);
@@ -51,12 +63,47 @@ fn main() {
     //}
     //println!("{:?}", y[..10].to_vec());
 
-    let dataset = CIFAR10::new(vec!["../data/cifar-10-batches-bin/data_batch_1.bin"]);
-    println!("{:#?}", dataset.labels[0]);
+    
+    let mut rng = StdRng::seed_from_u64(1337);
+    let train_dataset = CIFAR10::new(vec![
+        "../data/cifar-10-batches-bin/data_batch_1.bin",
+        "../data/cifar-10-batches-bin/data_batch_2.bin",
+        "../data/cifar-10-batches-bin/data_batch_3.bin",
+        "../data/cifar-10-batches-bin/data_batch_4.bin",
+    ]);
+    let val_dataset = CIFAR10::new(vec![
+        "../data/cifar-10-batches-bin/data_batch_5.bin",
+    ]);
+    let test_dataset = CIFAR10::new(vec![
+        "../data/cifar-10-batches-bin/data_batch_5.bin",
+    ]);
+    
+    let mut model = Sequential::new(vec![
+        Box::new(Linear::new(3072, 256, true, &mut rng)),
+        Box::new(ReLU::new()),
+        Box::new(Linear::new(256, 256, true, &mut rng)),
+        Box::new(ReLU::new()),
+        Box::new(Linear::new(256, 128, true, &mut rng)),
+        Box::new(ReLU::new()),
+        Box::new(Linear::new(128, 10, false, &mut rng)),
+    ]);
+    let mut loss_fn = Crossentropy::new();
+    let mut optim = SGD::new(0.3);
 
-    let train_loader = DataLoader::new(32, Box::new(dataset));
-    for (i, _) in train_loader.enumerate() {
-        println!("{i}");
+    for epoch in 0..10 {
+        let mut losses: Vec<f32> = vec![];
+        for (x, y) in BatchIter::new(32, &train_dataset) {
+            let logits = model.forward(&x);
+            let loss = loss_fn.forward(&logits, &y);
+            //println!("loss: {:.3}", loss);
+            losses.push(loss);
+    
+            optim.zero_grad(model.parameters());
+            model.backward(&loss_fn.backward(1.0));
+            optim.step(model.parameters());
+        }
+        let avg_loss = (losses.iter().sum::<f32>()) / (losses.len() as f32);
+        println!("\nepoch: {}, loss: {}\n", epoch, avg_loss);
     }
-
+    
 }

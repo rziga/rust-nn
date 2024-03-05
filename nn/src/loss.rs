@@ -24,13 +24,15 @@ impl Loss for Crossentropy {
         self.target = Some(target.clone());
         let mut x = input - &input.col_max();
         x = &x - &x.exp().col_sum().ln();
-        self.activation = Some(x.clone());
+        self.activation = Some(x.exp().clone());
 
         // crossentropy
-        (&x * target).sum()
+        let n = x.rows() as f32;
+        -1.0 / n * (&x * target).sum()
     }
 
     fn backward(&self, seed: f32) -> Matrix {
-        seed * &(self.activation.as_ref().unwrap() - self.target.as_ref().unwrap())
+        let n = self.activation.as_ref().unwrap().rows() as f32;
+        (seed / n) * &(self.activation.as_ref().unwrap() - self.target.as_ref().unwrap())
     }
 }
