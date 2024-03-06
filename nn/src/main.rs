@@ -5,11 +5,12 @@ mod loss;
 mod optimizer;
 mod lr_scheduler;
 mod data;
+mod metric;
 
-use crate::{data::BatchIter, layer::{Layer, Linear, ReLU, Sequential}, lr_scheduler::{ExponentialDecay, Scheduler}, matrix::Matrix};
+use crate::{data::BatchIter, layer::{Layer, Linear, ReLU, Sequential}, lr_scheduler::{ExponentialDecay, Scheduler}, matrix::Matrix, metric::accuracy};
 use data::CIFAR10;
 use loss::{Crossentropy, Loss};
-use optimizer::{SGD, Optimizer};
+use optimizer::{Adam, Optimizer, SGD};
 use rand::{random, rngs::StdRng, SeedableRng};
 use std::{fs, iter::Iterator, vec};
 
@@ -79,31 +80,44 @@ fn main() {
     ]);
     
     let mut model = Sequential::new(vec![
-        Box::new(Linear::new(3072, 256, true, &mut rng)),
+        Box::new(Linear::new(3072, 128, true, &mut rng)),
         Box::new(ReLU::new()),
-        Box::new(Linear::new(256, 256, true, &mut rng)),
+        Box::new(Linear::new(128, 128, true, &mut rng)),
         Box::new(ReLU::new()),
-        Box::new(Linear::new(256, 128, true, &mut rng)),
-        Box::new(ReLU::new()),
-        Box::new(Linear::new(128, 10, false, &mut rng)),
+        Box::new(Linear::new(128, 10, true, &mut rng)),
     ]);
     let mut loss_fn = Crossentropy::new();
-    let mut optim = SGD::new(0.3);
+    //let mut optim = SGD::new(0.1);
+    let mut optim = Adam::new(model.parameters(), 0.01, 0.9, 0.999, 1e-5, 1e-4);
 
     for epoch in 0..10 {
-        let mut losses: Vec<f32> = vec![];
-        for (x, y) in BatchIter::new(32, &train_dataset) {
+
+        // train epoch
+        let mut train_accs = vec![];
+        let mut losses = vec![];
+        for (x, y) in BatchIter::new(128, &train_dataset) {
             let logits = model.forward(&x);
             let loss = loss_fn.forward(&logits, &y);
-            //println!("loss: {:.3}", loss);
+            println!("loss: {:.3}", loss);
             losses.push(loss);
+            train_accs.push(accuracy(&logits, &y));
     
             optim.zero_grad(model.parameters());
             model.backward(&loss_fn.backward(1.0));
             optim.step(model.parameters());
         }
-        let avg_loss = (losses.iter().sum::<f32>()) / (losses.len() as f32);
-        println!("\nepoch: {}, loss: {}\n", epoch, avg_loss);
+        let train_acc = (train_accs.iter().sum::<f32>()) / (train_accs.len() as f32);
+        let train_loss = (losses.iter().sum::<f32>()) / (losses.len() as f32);
+
+        // val epoch
+        let mut val_accs = vec![];
+        for (x, y) in BatchIter::new(128, &val_dataset) {
+            let logits = model.forward(&x);
+            val_accs.push(accuracy(&logits, &y));
+        }
+        let val_acc = (val_accs.iter().sum::<f32>()) / (val_accs.len() as f32);
+
+        println!("epoch: {}, loss: {}, train acc: {}, val acc: {}", epoch, train_loss, train_acc, val_acc);
     }
     
 }
