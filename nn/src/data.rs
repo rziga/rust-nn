@@ -6,6 +6,7 @@ use crate::matrix::Matrix;
 pub trait Dataset {
     fn len(&self) -> usize;
     fn get_sample(&self, index: usize) -> (&Vec<f32>, &Vec<f32>);
+    fn batch_iter(&self, batch_size: usize) -> BatchIter;
 }
 
 pub struct CIFAR10 {
@@ -56,6 +57,10 @@ impl Dataset for CIFAR10 {
             &self.images[index],
             &self.labels[index],
         )
+    }
+
+    fn batch_iter(&self, batch_size: usize) -> BatchIter {
+        BatchIter::new(batch_size, self)
     }
 }
 

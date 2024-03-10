@@ -17,18 +17,23 @@ pub trait Optimizer {
 // Stochastic gradient descent
 pub struct SGD {
     lr: f32,
+    weight_decay: f32,
 }
 
 impl SGD {
-    pub fn new(lr: f32) -> Self {
-        Self { lr }
+    pub fn new(lr: f32, weight_decay: f32) -> Self {
+        Self { lr, weight_decay }
     }
 }
 
 impl Optimizer for SGD {
     fn step(&mut self, parameters: Vec<&mut Parameter>) {
         for param in parameters {
-            param.data = &param.data - &(self.lr * &param.grad);
+            // weight decay
+            let grad = &(&param.grad + &(self.weight_decay * &param.data));
+
+            // step
+            param.data = &param.data - &(self.lr * grad);
         }
     }
 
